@@ -193,6 +193,7 @@ enum kvm_pgtable_walk_flags {
 
 struct kvm_pgtable_visit_ctx {
 	kvm_pte_t				*ptep;
+	kvm_pte_t				old;
 	void * const				arg;
 	u64					addr;
 	u64					end;
