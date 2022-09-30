@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 /aarch64/arch_timer
 /aarch64/arch_timer_unsigned
+/aarch64/arch_timer_unsigned_unexpected_irq
 /aarch64/debug-exceptions
 /aarch64/get-reg-list
 /aarch64/hypercalls
