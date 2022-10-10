@@ -360,6 +360,26 @@ static inline bool kvm_pgtable_walk_shared(const struct kvm_pgtable_visit_ctx *c
 	return ctx->flags & KVM_PGTABLE_WALK_SHARED;
 }
 
+static inline void kvm_pgtable_dcache_clean_inval_poc(const struct kvm_pgtable_visit_ctx *ctx,
+						      kvm_pte_t pte)
+{
+	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
+
+	if (mm_ops->dcache_clean_inval_poc)
+		mm_ops->dcache_clean_inval_poc(kvm_pte_follow(pte, mm_ops),
+					       kvm_granule_size(ctx->level));
+}
+
+static inline void kvm_pgtable_icache_inval_pou(const struct kvm_pgtable_visit_ctx *ctx,
+						kvm_pte_t pte)
+{
+	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
+
+	if (mm_ops->icache_inval_pou)
+		mm_ops->icache_inval_pou(kvm_pte_follow(pte, mm_ops),
+					 kvm_granule_size(ctx->level));
+}
+
 /**
  * struct kvm_pgtable_walker - Hook into a page-table walk.
  * @cb:		Callback function to invoke during the walk.
