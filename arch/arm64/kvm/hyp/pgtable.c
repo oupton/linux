@@ -1095,10 +1095,10 @@ kvm_pte_t kvm_pgtable_stage2_mkyoung(struct kvm_pgtable *pgt, u64 addr)
 	return attr_old;
 }
 
-kvm_pte_t kvm_pgtable_stage2_mkold(struct kvm_pgtable *pgt, u64 addr)
+kvm_pte_t kvm_pgtable_stage2_mkold(struct kvm_pgtable *pgt, u64 addr, u64 size)
 {
 	kvm_pte_t attr_old = 0;
-	stage2_update_leaf_attrs(pgt, addr, 1, 0, KVM_PTE_LEAF_ATTR_LO_S2_AF,
+	stage2_update_leaf_attrs(pgt, addr, size, 0, KVM_PTE_LEAF_ATTR_LO_S2_AF,
 				 &attr_old, NULL, 0);
 	/*
 	 * "But where's the TLBI?!", you scream.
@@ -1109,10 +1109,10 @@ kvm_pte_t kvm_pgtable_stage2_mkold(struct kvm_pgtable *pgt, u64 addr)
 	return attr_old;
 }
 
-bool kvm_pgtable_stage2_is_young(struct kvm_pgtable *pgt, u64 addr)
+bool kvm_pgtable_stage2_is_young(struct kvm_pgtable *pgt, u64 addr, u64 size)
 {
 	kvm_pte_t attr_old = 0;
-	stage2_update_leaf_attrs(pgt, addr, 1, 0, 0, &attr_old, NULL, 0);
+	stage2_update_leaf_attrs(pgt, addr, size, 0, 0, &attr_old, NULL, 0);
 	return attr_old & KVM_PTE_LEAF_ATTR_LO_S2_AF;
 }
 

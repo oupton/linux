@@ -592,22 +592,24 @@ int kvm_pgtable_stage2_wrprotect(struct kvm_pgtable *pgt, u64 addr, u64 size);
 kvm_pte_t kvm_pgtable_stage2_mkyoung(struct kvm_pgtable *pgt, u64 addr);
 
 /**
- * kvm_pgtable_stage2_mkold() - Clear the access flag in a page-table entry.
+ * kvm_pgtable_stage2_mkold() - Clear the access flag in a range of page-table
+ *				entries.
  * @pgt:	Page-table structure initialised by kvm_pgtable_stage2_init*().
- * @addr:	Intermediate physical address to identify the page-table entry.
+ * @addr:	Intermediate physical address to identify the start of the
+ *		range.
  *
  * The offset of @addr within a page is ignored.
  *
- * If there is a valid, leaf page-table entry used to translate @addr, then
- * clear the access flag in that entry.
+ * If there is a valid, leaf page-table entry used to translate the specified
+ * range, then clear the access flag in that entry.
  *
  * Note that it is the caller's responsibility to invalidate the TLB after
  * calling this function to ensure that the updated permissions are visible
  * to the CPUs.
  *
- * Return: The old page-table entry prior to clearing the flag, 0 on failure.
+ * Return: Bitwise-OR of the prior to clearing the flag, 0 on failure.
  */
-kvm_pte_t kvm_pgtable_stage2_mkold(struct kvm_pgtable *pgt, u64 addr);
+kvm_pte_t kvm_pgtable_stage2_mkold(struct kvm_pgtable *pgt, u64 addr, u64 size);
 
 /**
  * kvm_pgtable_stage2_relax_perms() - Relax the permissions enforced by a
@@ -630,16 +632,18 @@ int kvm_pgtable_stage2_relax_perms(struct kvm_pgtable *pgt, u64 addr,
 				   enum kvm_pgtable_prot prot);
 
 /**
- * kvm_pgtable_stage2_is_young() - Test whether a page-table entry has the
- *				   access flag set.
+ * kvm_pgtable_stage2_is_young() - Test whether a range of page-table entries
+ *				   have the access flag set.
  * @pgt:	Page-table structure initialised by kvm_pgtable_stage2_init*().
  * @addr:	Intermediate physical address to identify the page-table entry.
+ * @size:	Size of the range to test.
  *
  * The offset of @addr within a page is ignored.
  *
- * Return: True if the page-table entry has the access flag set, false otherwise.
+ * Return: True if any of the page-table entries within the range have the
+ * access flag, false otherwise.
  */
-bool kvm_pgtable_stage2_is_young(struct kvm_pgtable *pgt, u64 addr);
+bool kvm_pgtable_stage2_is_young(struct kvm_pgtable *pgt, u64 addr, u64 size);
 
 /**
  * kvm_pgtable_stage2_flush_range() - Clean and invalidate data cache to Point
