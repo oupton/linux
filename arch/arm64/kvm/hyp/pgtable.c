@@ -1004,7 +1004,7 @@ int kvm_pgtable_stage2_unmap(struct kvm_pgtable *pgt, u64 addr, u64 size)
 struct stage2_attr_data {
 	kvm_pte_t			attr_set;
 	kvm_pte_t			attr_clr;
-	kvm_pte_t			pte;
+	kvm_pte_t			attr_old;
 	u32				level;
 };
 
@@ -1019,7 +1019,7 @@ static int stage2_attr_walker(const struct kvm_pgtable_visit_ctx *ctx,
 		return -EAGAIN;
 
 	data->level = ctx->level;
-	data->pte = pte;
+	data->attr_old |= pte & KVM_PTE_LEAF_ATTRS;
 	pte &= ~data->attr_clr;
 	pte |= data->attr_set;
 
@@ -1028,7 +1028,7 @@ static int stage2_attr_walker(const struct kvm_pgtable_visit_ctx *ctx,
 	 * but worst-case the access flag update gets lost and will be
 	 * set on the next access instead.
 	 */
-	if (data->pte != pte) {
+	if (ctx->old != pte) {
 		/*
 		 * Invalidate instruction cache before updating the guest
 		 * stage-2 PTE if we are going to add executable permission.
@@ -1047,7 +1047,7 @@ static int stage2_attr_walker(const struct kvm_pgtable_visit_ctx *ctx,
 
 static int stage2_update_leaf_attrs(struct kvm_pgtable *pgt, u64 addr,
 				    u64 size, kvm_pte_t attr_set,
-				    kvm_pte_t attr_clr, kvm_pte_t *orig_pte,
+				    kvm_pte_t attr_clr, kvm_pte_t *attr_old,
 				    u32 *level, enum kvm_pgtable_walk_flags flags)
 {
 	int ret;
@@ -1065,11 +1065,11 @@ static int stage2_update_leaf_attrs(struct kvm_pgtable *pgt, u64 addr,
 	if (ret)
 		return ret;
 
-	if (orig_pte)
-		*orig_pte = data.pte;
-
-	if (level)
+	if (level) {
+		*attr_old = data.attr_old;
 		*level = data.level;
+	}
+
 	return 0;
 }
 
@@ -1082,38 +1082,38 @@ int kvm_pgtable_stage2_wrprotect(struct kvm_pgtable *pgt, u64 addr, u64 size)
 
 kvm_pte_t kvm_pgtable_stage2_mkyoung(struct kvm_pgtable *pgt, u64 addr)
 {
-	kvm_pte_t pte = 0;
+	kvm_pte_t attr_old = 0;
 	int ret;
 
 	ret = stage2_update_leaf_attrs(pgt, addr, 1, KVM_PTE_LEAF_ATTR_LO_S2_AF, 0,
-				       &pte, NULL,
+				       &attr_old, NULL,
 				       KVM_PGTABLE_WALK_HANDLE_FAULT |
 				       KVM_PGTABLE_WALK_SHARED);
 	if (!ret)
 		dsb(ishst);
 
-	return pte;
+	return attr_old;
 }
 
 kvm_pte_t kvm_pgtable_stage2_mkold(struct kvm_pgtable *pgt, u64 addr)
 {
-	kvm_pte_t pte = 0;
+	kvm_pte_t attr_old = 0;
 	stage2_update_leaf_attrs(pgt, addr, 1, 0, KVM_PTE_LEAF_ATTR_LO_S2_AF,
-				 &pte, NULL, 0);
+				 &attr_old, NULL, 0);
 	/*
 	 * "But where's the TLBI?!", you scream.
 	 * "Over in the core code", I sigh.
 	 *
 	 * See the '->clear_flush_young()' callback on the KVM mmu notifier.
 	 */
-	return pte;
+	return attr_old;
 }
 
 bool kvm_pgtable_stage2_is_young(struct kvm_pgtable *pgt, u64 addr)
 {
-	kvm_pte_t pte = 0;
-	stage2_update_leaf_attrs(pgt, addr, 1, 0, 0, &pte, NULL, 0);
-	return pte & KVM_PTE_LEAF_ATTR_LO_S2_AF;
+	kvm_pte_t attr_old = 0;
+	stage2_update_leaf_attrs(pgt, addr, 1, 0, 0, &attr_old, NULL, 0);
+	return attr_old & KVM_PTE_LEAF_ATTR_LO_S2_AF;
 }
 
 int kvm_pgtable_stage2_relax_perms(struct kvm_pgtable *pgt, u64 addr,

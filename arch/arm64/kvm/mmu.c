@@ -1618,7 +1618,7 @@ bool kvm_age_gfn(struct kvm *kvm, struct kvm_gfn_range *range)
 	kpte = kvm_pgtable_stage2_mkold(kvm->arch.mmu.pgt,
 					range->start << PAGE_SHIFT);
 	pte = __pte(kpte);
-	return pte_valid(pte) && pte_young(pte);
+	return pte_young(pte);
 }
 
 bool kvm_test_age_gfn(struct kvm *kvm, struct kvm_gfn_range *range)
