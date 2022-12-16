@@ -44,6 +44,8 @@
 #define GICD_IDREGS			0xFFD0
 #define GICD_PIDR2			0xFFE8
 
+#define GICD_IMP_GIC700_CFGIDR		0xF000
+
 #define ESPI_BASE_INTID			4096
 
 /*

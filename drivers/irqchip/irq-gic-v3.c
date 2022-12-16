@@ -1816,13 +1816,24 @@ static void gic_enable_nmi_support(void)
 		gic_chip.flags |= IRQCHIP_SUPPORTS_NMI;
 }
 
+static void gic_print_iidr(u32 iidr)
+{
+	pr_info("detected implementer: %u\n", FIELD_GET(GICD_IIDR_IMPLEMENTER_MASK, iidr));
+	pr_info("detected product ID: %u\n", FIELD_GET(GICD_IIDR_PRODUCT_ID_MASK, iidr));
+	pr_info("detected revision: r%up%u\n",
+		FIELD_GET(GICD_IIDR_VARIANT_MASK, iidr),
+		FIELD_GET(GICD_IIDR_REVISION_MASK, iidr));
+
+	pr_info("GICD_CFGIDR: %llx\n", readq_relaxed(gic_data.dist_base + GICD_IMP_GIC700_CFGIDR));
+}
+
 static int __init gic_init_bases(void __iomem *dist_base,
 				 struct redist_region *rdist_regs,
 				 u32 nr_redist_regions,
 				 u64 redist_stride,
 				 struct fwnode_handle *handle)
 {
-	u32 typer;
+	u32 typer, iidr;
 	int err;
 
 	if (!is_hyp_mode_available())
@@ -1843,8 +1854,9 @@ static int __init gic_init_bases(void __iomem *dist_base,
 	typer = readl_relaxed(gic_data.dist_base + GICD_TYPER);
 	gic_data.rdists.gicd_typer = typer;
 
-	gic_enable_quirks(readl_relaxed(gic_data.dist_base + GICD_IIDR),
-			  gic_quirks, &gic_data);
+	iidr = readl_relaxed(gic_data.dist_base + GICD_IIDR);
+	gic_print_iidr(iidr);
+	gic_enable_quirks(iidr, gic_quirks, &gic_data);
 
 	pr_info("%d SPIs implemented\n", GIC_LINE_NR - 32);
 	pr_info("%d Extended SPIs implemented\n", GIC_ESPI_NR);
