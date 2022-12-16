@@ -111,7 +111,7 @@ static kvm_pte_t kvm_init_valid_leaf_pte(u64 pa, kvm_pte_t attr, u32 level)
 	u64 type = (level == KVM_PGTABLE_MAX_LEVELS - 1) ? KVM_PTE_TYPE_PAGE :
 							   KVM_PTE_TYPE_BLOCK;
 
-	pte |= attr & (KVM_PTE_LEAF_ATTR_LO | KVM_PTE_LEAF_ATTR_HI);
+	pte |= attr & KVM_PTE_LEAF_ATTRS;
 	pte |= FIELD_PREP(KVM_PTE_TYPE, type);
 	pte |= KVM_PTE_VALID;
 
@@ -1051,10 +1051,9 @@ static int stage2_update_leaf_attrs(struct kvm_pgtable *pgt, u64 addr,
 				    u32 *level, enum kvm_pgtable_walk_flags flags)
 {
 	int ret;
-	kvm_pte_t attr_mask = KVM_PTE_LEAF_ATTR_LO | KVM_PTE_LEAF_ATTR_HI;
 	struct stage2_attr_data data = {
-		.attr_set	= attr_set & attr_mask,
-		.attr_clr	= attr_clr & attr_mask,
+		.attr_set	= attr_set & KVM_PTE_LEAF_ATTRS,
+		.attr_clr	= attr_clr & KVM_PTE_LEAF_ATTRS,
 	};
 	struct kvm_pgtable_walker walker = {
 		.cb		= stage2_attr_walker,
