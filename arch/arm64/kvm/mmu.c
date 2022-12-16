@@ -1607,17 +1607,15 @@ bool kvm_set_spte_gfn(struct kvm *kvm, struct kvm_gfn_range *range)
 bool kvm_age_gfn(struct kvm *kvm, struct kvm_gfn_range *range)
 {
 	u64 size = (range->end - range->start) << PAGE_SHIFT;
-	kvm_pte_t kpte;
-	pte_t pte;
+	kvm_pte_t pte;
 
 	if (!kvm->arch.mmu.pgt)
 		return false;
 
-	kpte = kvm_pgtable_stage2_mkold(kvm->arch.mmu.pgt,
-					range->start << PAGE_SHIFT,
-					size);
-	pte = __pte(kpte);
-	return pte_young(pte);
+	pte = kvm_pgtable_stage2_mkold(kvm->arch.mmu.pgt,
+				       range->start << PAGE_SHIFT,
+				       size);
+	return kvm_pte_young(pte);
 }
 
 bool kvm_test_age_gfn(struct kvm *kvm, struct kvm_gfn_range *range)

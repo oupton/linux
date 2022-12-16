@@ -1113,7 +1113,7 @@ bool kvm_pgtable_stage2_is_young(struct kvm_pgtable *pgt, u64 addr, u64 size)
 {
 	kvm_pte_t attr_old = 0;
 	stage2_update_leaf_attrs(pgt, addr, size, 0, 0, &attr_old, NULL, 0);
-	return attr_old & KVM_PTE_LEAF_ATTR_LO_S2_AF;
+	return kvm_pte_young(attr_old);
 }
 
 int kvm_pgtable_stage2_relax_perms(struct kvm_pgtable *pgt, u64 addr,
