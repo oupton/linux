@@ -811,6 +811,13 @@ static int stage2_map_walker_try_leaf(const struct kvm_pgtable_visit_ctx *ctx,
 	struct kvm_pgtable *pgt = data->mmu->pgt;
 	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
 
+	/*
+	 * If the walker has overrun the valid physical address space then
+	 * something must have gone horribly wrong...
+	 */
+	if (WARN_ON(!kvm_phys_is_valid(data->phys)))
+		return -EINVAL;
+
 	if (!stage2_leaf_mapping_allowed(ctx, data))
 		return -E2BIG;
 
