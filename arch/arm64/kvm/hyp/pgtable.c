@@ -864,16 +864,11 @@ static int stage2_map_walk_table_pre(const struct kvm_pgtable_visit_ctx *ctx,
 	return 0;
 }
 
-static int stage2_map_walk_leaf(const struct kvm_pgtable_visit_ctx *ctx,
-				struct stage2_map_data *data)
+static int stage2_map_walker_try_table(const struct kvm_pgtable_visit_ctx *ctx,
+				       struct stage2_map_data *data)
 {
 	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
 	kvm_pte_t *childp, new;
-	int ret;
-
-	ret = stage2_map_walker_try_leaf(ctx, data);
-	if (ret != -E2BIG)
-		return ret;
 
 	if (WARN_ON(ctx->level == KVM_PGTABLE_MAX_LEVELS - 1))
 		return -EINVAL;
@@ -890,15 +885,27 @@ static int stage2_map_walk_leaf(const struct kvm_pgtable_visit_ctx *ctx,
 		return -EAGAIN;
 	}
 
+	new = kvm_init_table_pte(childp, mm_ops);
+	stage2_make_pte(ctx, new);
+
+	return 0;
+}
+
+static int stage2_map_walk_leaf(const struct kvm_pgtable_visit_ctx *ctx,
+				struct stage2_map_data *data)
+{
+	int ret;
+
+	ret = stage2_map_walker_try_leaf(ctx, data);
+	if (ret != -E2BIG)
+		return ret;
+
 	/*
 	 * If we've run into an existing block mapping then replace it with
 	 * a table. Accesses beyond 'end' that fall within the new table
 	 * will be mapped lazily.
 	 */
-	new = kvm_init_table_pte(childp, mm_ops);
-	stage2_make_pte(ctx, new);
-
-	return 0;
+	return stage2_map_walker_try_table(ctx, data);
 }
 
 /*
