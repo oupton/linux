@@ -806,18 +806,13 @@ static bool stage2_leaf_mapping_allowed(const struct kvm_pgtable_visit_ctx *ctx,
 static int stage2_map_walker_try_leaf(const struct kvm_pgtable_visit_ctx *ctx,
 				      struct stage2_map_data *data)
 {
-	kvm_pte_t new;
-	u64 granule = kvm_granule_size(ctx->level), phys = data->phys;
+	kvm_pte_t new = kvm_init_valid_leaf_pte(data->phys, data->attr, ctx->level);
+	u64 granule = kvm_granule_size(ctx->level);
 	struct kvm_pgtable *pgt = data->mmu->pgt;
 	struct kvm_pgtable_mm_ops *mm_ops = ctx->mm_ops;
 
 	if (!stage2_leaf_mapping_allowed(ctx, data))
 		return -E2BIG;
-
-	if (kvm_phys_is_valid(phys))
-		new = kvm_init_valid_leaf_pte(phys, data->attr, ctx->level);
-	else
-		new = kvm_init_invalid_leaf_owner(data->owner_id);
 
 	/*
 	 * Skip updating the PTE if we are trying to recreate the exact
@@ -840,9 +835,7 @@ static int stage2_map_walker_try_leaf(const struct kvm_pgtable_visit_ctx *ctx,
 		mm_ops->icache_inval_pou(kvm_pte_follow(new, mm_ops), granule);
 
 	stage2_make_pte(ctx, new);
-
-	if (kvm_phys_is_valid(phys))
-		data->phys += granule;
+	data->phys += granule;
 	return 0;
 }
 
@@ -963,6 +956,25 @@ int kvm_pgtable_stage2_map(struct kvm_pgtable *pgt, u64 addr, u64 size,
 	return ret;
 }
 
+static int stage2_set_owner_walker(const struct kvm_pgtable_visit_ctx *ctx,
+				   enum kvm_pgtable_walk_flags visit)
+{
+	struct stage2_map_data *data = ctx->arg;
+	kvm_pte_t new = kvm_init_invalid_leaf_owner(data->owner_id);
+
+	if (!stage2_leaf_mapping_allowed(ctx, data))
+		return stage2_map_walker_try_table(ctx, data);
+
+	if (!stage2_pte_needs_update(ctx->old, new))
+		return -EAGAIN;
+
+	if (!stage2_try_break_pte(ctx, data->mmu))
+		return -EAGAIN;
+
+	stage2_make_pte(ctx, new);
+	return 0;
+}
+
 int kvm_pgtable_stage2_set_owner(struct kvm_pgtable *pgt, u64 addr, u64 size,
 				 void *mc, u8 owner_id)
 {
@@ -975,7 +987,7 @@ int kvm_pgtable_stage2_set_owner(struct kvm_pgtable *pgt, u64 addr, u64 size,
 		.force_pte	= true,
 	};
 	struct kvm_pgtable_walker walker = {
-		.cb		= stage2_map_walker,
+		.cb		= stage2_set_owner_walker,
 		.flags		= KVM_PGTABLE_WALK_TABLE_PRE |
 				  KVM_PGTABLE_WALK_LEAF,
 		.arg		= &map_data,
