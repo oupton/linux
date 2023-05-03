@@ -432,6 +432,14 @@ static struct midr_range broken_aarch32_aes[] = {
 };
 #endif /* CONFIG_ARM64_WORKAROUND_TRBE_WRITE_OUT_OF_RANGE */
 
+#ifdef CONFIG_AMPERE_ERRATUM_PILE_OF_SAND
+static struct midr_range broken_hw_af_cpus[] = {
+	MIDR_ALL_VERSIONS(MIDR_AMPERE1),
+	MIDR_ALL_VERSIONS(MIDR_AMPERE1X),
+	{},
+};
+#endif /* CONFIG_AMPERE_ERRATUM_PILE_OF_SAND */
+
 const struct arm64_cpu_capabilities arm64_errata[] = {
 #ifdef CONFIG_ARM64_WORKAROUND_CLEAN_CACHE
 	{
@@ -728,6 +736,13 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
 		ERRATA_MIDR_RANGE(MIDR_CORTEX_A510, 0, 0, 1, 1),
 		MIDR_FIXED(MIDR_CPU_VAR_REV(1,1), BIT(25)),
 		.cpu_enable = cpu_clear_bf16_from_user_emulation,
+	},
+#endif
+#ifdef CONFIG_AMPERE_ERRATUM_PILE_OF_SAND
+	{
+		.desc = "Ampere erratum PILE_OF_SAND",
+		.capability = ARM64_WORKAROUND_AMPERE_PILE_OF_SAND,
+		ERRATA_MIDR_RANGE_LIST(broken_hw_af_cpus),
 	},
 #endif
 	{

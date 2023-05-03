@@ -386,6 +386,27 @@ menu "Kernel Features"
 
 menu "ARM errata workarounds via the alternatives framework"
 
+config AMPERE_ERRATUM_PILE_OF_SAND
+        bool "AmpereOne(X): PILE_OF_SAND: Hardware AF performs non-atomic update to a descriptor"
+	default y
+	help
+	  This option adds an alternative code sequence to work around Ampere
+	  erratum PILE_OF_SAND on AmpereOne and AmpereOneX parts.
+
+	  The affected designs perform a non-atomic update to the descriptor
+	  when setting the Access Flag, which could race with a software
+	  change to the affected descriptor. While these designs do not
+	  advertise support for HAFDBS, the associated system register
+	  controls are still functional. This is in contravention with the
+	  architecture, which requires that the associated system register
+	  bits are RES0.
+
+	  The workaround forces KVM to explicitly set VTCR_EL2.HA to 0,
+	  which avoids enabling unadvertised hardware Access Flag management
+	  at stage-2.
+
+	  If unsure, say Y.
+
 config ARM64_WORKAROUND_CLEAN_CACHE
 	bool
 
